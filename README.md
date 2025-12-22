@@ -6,8 +6,8 @@ Unified institutional-grade crypto trading system for KuCoin with interactive da
 
 **For New Users (First Time):**
 ```bash
-git clone <your-repo-url>
-cd Trade_Advice
+git clone https://github.com/DecarloFreelance/hekstradehub.git
+cd hekstradehub
 ./start.sh
 ```
 
@@ -68,7 +68,7 @@ Interactive menu system with 6 core tools:
 ## Project Structure
 
 ```
-Trade_Advice/
+hekstradehub/
 ├── dashboard.py              # Main unified dashboard
 ├── start.sh                  # Quick launch script
 ├── core/                     # Shared modules
@@ -163,7 +163,7 @@ These never get uploaded to GitHub!
 
 ---
 
-## 🔧 Manual Setup (Optional)
+## Manual Setup (Optional)
 
 If you prefer manual control:
 
@@ -189,9 +189,9 @@ python dashboard.py
 
 ---
 
-## 📖 Tool Guide
+## Tool Guide
 
-### 🔍 Live Opportunity Watcher
+### Live Opportunity Watcher
 **Purpose:** Find new trading opportunities
 ```bash
 python scripts/opportunity_watcher.py
@@ -203,7 +203,7 @@ python scripts/opportunity_watcher.py
 - Live countdown timer
 - Best for: Finding your next trade
 
-### 📊 Institutional Scan
+### Institutional Scan
 **Purpose:** Full market snapshot
 ```bash
 python scripts/institutional_scan.py
@@ -214,7 +214,7 @@ python scripts/institutional_scan.py
 - See everything at once
 - Best for: Market overview right now
 
-### 🔬 Coin Analyzer (Universal Monitor)
+### Coin Analyzer (Universal Monitor)
 **Purpose:** Deep dive on specific symbol
 ```bash
 python scripts/universal_monitor.py TIA
@@ -225,7 +225,7 @@ python scripts/universal_monitor.py TIA
 - Volume and volatility metrics
 - Best for: Research before entering
 
-### 📈 Position Monitor
+### Position Monitor
 **Purpose:** Track open positions
 ```bash
 python scripts/universal_monitor.py
@@ -238,7 +238,7 @@ python scripts/universal_monitor.py
 - ATR-based stop suggestions
 - Best for: Monitoring active trades
 
-### 🛡️ Smart Trailing Stop
+### Smart Trailing Stop
 **Purpose:** Dynamic profit protection
 ```bash
 python scripts/smart_trailing_stop.py
@@ -251,7 +251,7 @@ python scripts/smart_trailing_stop.py
 - Updates every 5 seconds
 - Best for: Protecting profits intelligently
 
-### 🔒 Basic Trailing Stop
+### Basic Trailing Stop
 **Purpose:** Simple fixed trailing
 ```bash
 python scripts/trailing_stop.py
@@ -267,7 +267,7 @@ python scripts/trailing_stop.py
 
 ---
 
-## 🎯 Institutional Indicator System
+## Institutional Indicator System
 
 ### Weighted Scoring (0-100)
 | Component | Max Points | What It Measures |
@@ -316,7 +316,7 @@ All three must align for highest scores!
 
 ---
 
-## 📖 Common Usage Scenarios
+## Common Usage Scenarios
 
 ### Scenario 1: "Find me a trade"
 ```bash
@@ -352,7 +352,7 @@ python universal_monitor.py
 
 ---
 
-## 🎨 Understanding the Live Scanner Display
+## Understanding the Live Scanner Display
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -391,7 +391,7 @@ python universal_monitor.py
 
 ---
 
-## 🛡️ Risk Management Rules
+## Risk Management Rules
 
 ### Before Every Trade
 1. ✅ Check signal score ≥70
@@ -415,7 +415,7 @@ python universal_monitor.py
 
 ---
 
-## 📁 File Structure
+## File Structure
 
 ```
 Trade_Advice/
@@ -438,7 +438,7 @@ Trade_Advice/
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### "No module named 'ccxt'" or similar
 ```bash
@@ -468,7 +468,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🎓 Trading Tips
+## Trading Tips
 
 ### What the Pros Do
 1. **Wait for confluence:** All indicators agreeing (score ≥70)

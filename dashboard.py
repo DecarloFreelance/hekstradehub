@@ -9,6 +9,9 @@ from pathlib import Path
 from core.display import *
 from core.api import get_exchange, get_active_positions
 
+# Use the same Python that's running this dashboard (from venv)
+VENV_PYTHON = sys.executable
+
 def setup_env_file():
     """Check for .env file and create if missing - returns connection status"""
     env_path = Path('.env')
@@ -263,13 +266,13 @@ def run_opportunity_watcher():
     """Launch opportunity watcher"""
     clear_screen()
     print(f"{CYAN}Launching Live Opportunity Watcher...{RESET}\n")
-    os.system('python scripts/opportunity_watcher.py')
+    os.system(f'"{VENV_PYTHON}" scripts/opportunity_watcher.py')
 
 def run_institutional_scan():
     """Launch institutional scan"""
     clear_screen()
     print(f"{CYAN}Running Institutional Market Scan...{RESET}\n")
-    os.system('python scripts/institutional_scan.py')
+    os.system(f'"{VENV_PYTHON}" scripts/institutional_scan.py')
 
 def run_coin_analyzer():
     """Launch coin analyzer"""
@@ -277,7 +280,7 @@ def run_coin_analyzer():
     symbol = input(f"{CYAN}Enter symbol to analyze (e.g., TIA, SOL, XRP): {RESET}").strip().upper()
     if symbol:
         print(f"\n{CYAN}Analyzing {symbol}...{RESET}\n")
-        os.system(f'python scripts/universal_monitor.py {symbol}')
+        os.system(f'"{VENV_PYTHON}" scripts/universal_monitor.py {symbol}')
 
 def run_position_monitor():
     """Launch position monitor"""
@@ -291,7 +294,7 @@ def run_position_monitor():
     
     if len(positions) == 1:
         print(f"{CYAN}Monitoring position: {positions[0]['symbol']}{RESET}\n")
-        os.system('python scripts/universal_monitor.py')
+        os.system(f'"{VENV_PYTHON}" scripts/universal_monitor.py')
     else:
         print(f"{BOLD}Select position to monitor:{RESET}\n")
         for i, pos in enumerate(positions, 1):
@@ -303,22 +306,26 @@ def run_position_monitor():
         choice = input(f"\n{CYAN}Select (0-{len(positions)}): {RESET}").strip()
         
         if choice == '0' or choice == '':
-            os.system('python scripts/universal_monitor.py')
+            os.system(f'"{VENV_PYTHON}" scripts/universal_monitor.py')
         elif choice.isdigit() and 1 <= int(choice) <= len(positions):
             symbol = positions[int(choice)-1]['symbol'].replace('USDTM', '')
-            os.system(f'python scripts/universal_monitor.py {symbol}')
+            os.system(f'"{VENV_PYTHON}" scripts/universal_monitor.py {symbol}')
 
 def run_smart_trailing_stop():
     """Launch smart trailing stop"""
     clear_screen()
     print(f"{CYAN}Launching Smart Trailing Stop...{RESET}\n")
-    os.system('python scripts/smart_trailing_stop.py')
+    print(f"{YELLOW}Using Python: {VENV_PYTHON}{RESET}\n")
+    result = os.system(f'"{VENV_PYTHON}" scripts/smart_trailing_stop.py')
+    if result != 0:
+        print(f"\n{RED}Script exited with code: {result}{RESET}")
+        input(f"{CYAN}Press Enter to continue...{RESET}")
 
 def run_basic_trailing_stop():
     """Launch basic trailing stop"""
     clear_screen()
     print(f"{CYAN}Launching Basic Trailing Stop...{RESET}\n")
-    os.system('python scripts/trailing_stop.py')
+    os.system(f'"{VENV_PYTHON}" scripts/trailing_stop.py')
 
 def main():
     """Main dashboard loop"""

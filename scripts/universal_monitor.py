@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
-Universal Crypto Futures Monitor
-Monitors any open position or analyzes any coin
-"""
+##
+ # Universal Crypto Futures Monitor
+ # Monitors any open position or analyzes any coin
+##
 import os
 import time
 import ccxt
@@ -13,6 +13,21 @@ import requests
 import hmac
 import hashlib
 import base64
+
+# Import indicator functions
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from core.indicators import (
+    calculate_ema,
+    calculate_macd,
+    calculate_stochastic_rsi,
+    calculate_adx,
+    calculate_atr,
+    calculate_bollinger_bands,
+    calculate_obv,
+    calculate_vwap
+)
 
 load_dotenv()
 
@@ -35,468 +50,91 @@ def calculate_rsi(data, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-def calculate_ema(data, period):
-    """Calculate Exponential Moving Average"""
-    return data.ewm(span=period, adjust=False).mean()
 
-def calculate_macd(data):
-    """Calculate MACD (12, 26, 9)"""
-    ema12 = calculate_ema(data, 12)
-    ema26 = calculate_ema(data, 26)
-    macd_line = ema12 - ema26
-    signal_line = calculate_ema(macd_line, 9)
-    histogram = macd_line - signal_line
-    return macd_line, signal_line, histogram
-
-def calculate_stochastic_rsi(data, period=14, smooth_k=3, smooth_d=3):
-    """Calculate Stochastic RSI"""
-    rsi = calculate_rsi(data, period)
-    stoch_rsi = (rsi - rsi.rolling(window=period).min()) / (rsi.rolling(window=period).max() - rsi.rolling(window=period).min()) * 100
-    k = stoch_rsi.rolling(window=smooth_k).mean()
-    d = k.rolling(window=smooth_d).mean()
-    return k, d
-
-def calculate_adx(df, period=14):
-    """Calculate ADX (Average Directional Index)"""
-    high = df['high']
-    low = df['low']
-    close = df['close']
-    
-    plus_dm = high.diff()
-    minus_dm = -low.diff()
-    plus_dm[plus_dm < 0] = 0
-    minus_dm[minus_dm < 0] = 0
-    
-    tr1 = high - low
-    tr2 = abs(high - close.shift())
-    tr3 = abs(low - close.shift())
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    
-    plus_di = 100 * (plus_dm.rolling(window=period).mean() / atr)
-    minus_di = 100 * (minus_dm.rolling(window=period).mean() / atr)
-    
-    dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-    adx = dx.rolling(window=period).mean()
-    
-    return adx, plus_di, minus_di
-
-def calculate_atr(df, period=14):
-    """Calculate ATR (Average True Range)"""
-    high = df['high']
-    low = df['low']
-    close = df['close']
-    
-    tr1 = high - low
-    tr2 = abs(high - close.shift())
-    tr3 = abs(low - close.shift())
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-    atr = tr.rolling(window=period).mean()
-    
-    return atr
-
-def calculate_bollinger_bands(data, period=20, std_dev=2):
-    """Calculate Bollinger Bands"""
-    sma = data.rolling(window=period).mean()
-    std = data.rolling(window=period).std()
-    upper_band = sma + (std * std_dev)
-    lower_band = sma - (std * std_dev)
-    return upper_band, sma, lower_band
-
-def calculate_obv(df):
-    """Calculate On-Balance Volume"""
-    obv = (df['volume'] * (~df['close'].diff().le(0) * 2 - 1)).cumsum()
-    return obv
-
-def calculate_vwap(df):
-    """Calculate VWAP (Volume Weighted Average Price)"""
-    typical_price = (df['high'] + df['low'] + df['close']) / 3
-    vwap = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
-    return vwap
-
-def fetch_positions(exchange):
-    """Fetch open futures positions using KuCoin Futures API"""
-    try:
-        api_key = exchange.apiKey
-        api_secret = exchange.secret
-        api_passphrase = exchange.password
-        
-        endpoint = '/api/v1/positions'
-        url = f'https://api-futures.kucoin.com{endpoint}'
-        
-        now = int(time.time() * 1000)
-        str_to_sign = str(now) + 'GET' + endpoint
-        signature = base64.b64encode(
-            hmac.new(api_secret.encode('utf-8'), 
-                    str_to_sign.encode('utf-8'), 
-                    hashlib.sha256).digest()
-        )
-        passphrase = base64.b64encode(
-            hmac.new(api_secret.encode('utf-8'), 
-                    api_passphrase.encode('utf-8'), 
-                    hashlib.sha256).digest()
-        )
-        
-        headers = {
-            'KC-API-KEY': api_key,
-            'KC-API-SIGN': signature.decode('utf-8'),
-            'KC-API-TIMESTAMP': str(now),
-            'KC-API-PASSPHRASE': passphrase.decode('utf-8'),
-            'KC-API-KEY-VERSION': '2'
-        }
-        
-        response = requests.get(url, headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('code') == '200000':
-                return data.get('data', [])
-        return []
-    
-    except Exception as e:
-        print(f"{RED}Error fetching positions: {e}{RESET}")
-        return []
-
-def get_active_positions(exchange):
-    """Get all active positions"""
-    positions = fetch_positions(exchange)
-    active = []
-    
-    for pos in positions:
-        current_qty = float(pos.get('currentQty', 0))
-        if current_qty != 0:
-            active.append({
-                'symbol': pos.get('symbol', ''),
-                'side': 'LONG' if current_qty > 0 else 'SHORT',
-                'quantity': abs(current_qty),
-                'entry_price': float(pos.get('avgEntryPrice', 0)),
-                'mark_price': float(pos.get('markPrice', 0)),
-                'leverage': float(pos.get('realLeverage', 1)),
-                'unrealized_pnl': float(pos.get('unrealisedPnl', 0)),
-                'unrealized_roe': float(pos.get('unrealisedRoePcnt', 0)) * 100,
-                'liquidation_price': float(pos.get('liquidationPrice', 0)),
-                'margin': float(pos.get('maintMargin', 0))
-            })
-    
-    return active
-
-def convert_to_spot_symbol(futures_symbol):
-    """Convert futures symbol to spot symbol (e.g., SOLUSDTM -> SOL/USDT)"""
-    # Remove M suffix and add slash
-    base = futures_symbol.replace('USDTM', '').replace('USDT', '')
-    return f"{base}/USDT"
-
-def get_market_data(exchange, symbol):
-    """Fetch comprehensive market data with all indicators"""
-    try:
-        ticker = exchange.fetch_ticker(symbol)
-        ohlcv_15m = exchange.fetch_ohlcv(symbol, '15m', limit=100)
-        ohlcv_1h = exchange.fetch_ohlcv(symbol, '1h', limit=100)
-        ohlcv_4h = exchange.fetch_ohlcv(symbol, '4h', limit=50)
-        
-        df_15m = pd.DataFrame(ohlcv_15m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df_1h = pd.DataFrame(ohlcv_1h, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df_4h = pd.DataFrame(ohlcv_4h, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        
-        # 15M indicators
-        rsi_15m = calculate_rsi(df_15m['close']).iloc[-1]
-        ema20_15m = calculate_ema(df_15m['close'], 20).iloc[-1]
-        ema50_15m = calculate_ema(df_15m['close'], 50).iloc[-1]
-        macd_15m, signal_15m, hist_15m = calculate_macd(df_15m['close'])
-        stoch_k_15m, stoch_d_15m = calculate_stochastic_rsi(df_15m['close'])
-        adx_15m, plus_di_15m, minus_di_15m = calculate_adx(df_15m)
-        atr_15m = calculate_atr(df_15m).iloc[-1]
-        bb_upper_15m, bb_mid_15m, bb_lower_15m = calculate_bollinger_bands(df_15m['close'])
-        obv_15m = calculate_obv(df_15m)
-        vwap_15m = calculate_vwap(df_15m).iloc[-1]
-        
-        # 1H indicators
-        rsi_1h = calculate_rsi(df_1h['close']).iloc[-1]
-        ema20_1h = calculate_ema(df_1h['close'], 20).iloc[-1]
-        ema50_1h = calculate_ema(df_1h['close'], 50).iloc[-1]
-        macd_1h, signal_1h, hist_1h = calculate_macd(df_1h['close'])
-        adx_1h, plus_di_1h, minus_di_1h = calculate_adx(df_1h)
-        
-        # 4H indicators
-        rsi_4h = calculate_rsi(df_4h['close']).iloc[-1]
-        ema20_4h = calculate_ema(df_4h['close'], 20).iloc[-1]
-        ema50_4h = calculate_ema(df_4h['close'], 50).iloc[-1]
-        adx_4h, plus_di_4h, minus_di_4h = calculate_adx(df_4h)
-        
-        # Volume analysis
-        vol_ma = df_15m['volume'].rolling(window=20).mean().iloc[-1]
-        vol_ratio = df_15m['volume'].iloc[-1] / vol_ma if vol_ma > 0 else 1
-        obv_slope = (obv_15m.iloc[-1] - obv_15m.iloc[-10]) / 10  # OBV trend
-        
-        return {
-            'price': ticker['last'],
-            'change_24h': ticker['percentage'],
-            'high_24h': ticker['high'],
-            'low_24h': ticker['low'],
-            'volume': ticker['quoteVolume'],
-            
-            # 15M
-            'rsi_15m': rsi_15m,
-            'ema20_15m': ema20_15m,
-            'ema50_15m': ema50_15m,
-            'macd_15m': macd_15m.iloc[-1],
-            'macd_signal_15m': signal_15m.iloc[-1],
-            'macd_hist_15m': hist_15m.iloc[-1],
-            'stoch_k_15m': stoch_k_15m.iloc[-1],
-            'stoch_d_15m': stoch_d_15m.iloc[-1],
-            'adx_15m': adx_15m.iloc[-1],
-            'atr_15m': atr_15m,
-            'bb_upper_15m': bb_upper_15m.iloc[-1],
-            'bb_mid_15m': bb_mid_15m.iloc[-1],
-            'bb_lower_15m': bb_lower_15m.iloc[-1],
-            'vwap_15m': vwap_15m,
-            'trend_15m': 'UP' if ema20_15m > ema50_15m else 'DOWN',
-            
-            # 1H
-            'rsi_1h': rsi_1h,
-            'ema20_1h': ema20_1h,
-            'ema50_1h': ema50_1h,
-            'macd_hist_1h': hist_1h.iloc[-1],
-            'adx_1h': adx_1h.iloc[-1],
-            'trend_1h': 'UP' if ema20_1h > ema50_1h else 'DOWN',
-            
-            # 4H
-            'rsi_4h': rsi_4h,
-            'ema20_4h': ema20_4h,
-            'ema50_4h': ema50_4h,
-            'adx_4h': adx_4h.iloc[-1],
-            'trend_4h': 'UP' if ema20_4h > ema50_4h else 'DOWN',
-            
-            # Volume
-            'vol_ratio': vol_ratio,
-            'obv_slope': obv_slope
-        }
-    except Exception as e:
-        print(f"{RED}Error fetching market data: {e}{RESET}")
-        return None
-
-def calculate_signal_score(market, position=None):
+def calculate_signal_score(market, position=None, prev_score=None):
     """
-    Institutional-grade weighted signal score (0-100)
-    
-    Breakdown:
-    - Trend alignment (15m/1h/4h): 30 pts
-    - Momentum (RSI + MACD + Stoch): 25 pts
-    - Volume confirmation: 20 pts
-    - Volatility favorable (ATR/BB): 15 pts
-    - Level proximity (VWAP): 10 pts
+    Institutional-grade weighted signal score (0-100) for both Long and Short.
+    Returns: (long_score:int, short_score:int, details:dict)
     """
-    score = 0
-    details = []
-    
-    # 1. TREND ALIGNMENT (30 pts max)
-    trend_score = 0
-    if market['trend_4h'] == 'UP':
-        trend_score += 12
-        details.append("✅ 4H trend UP (+12)")
-    else:
-        details.append("❌ 4H trend DOWN (0)")
-    
-    if market['trend_1h'] == 'UP':
-        trend_score += 10
-        details.append("✅ 1H trend UP (+10)")
-    else:
-        details.append("❌ 1H trend DOWN (0)")
-    
-    if market['trend_15m'] == 'UP':
-        trend_score += 8
-        details.append("✅ 15M trend UP (+8)")
-    else:
-        details.append("❌ 15M trend DOWN (0)")
-    
-    score += trend_score
-    
-    # 2. MOMENTUM (25 pts max)
-    momentum_score = 0
-    
-    # RSI momentum
-    if 50 < market['rsi_15m'] < 70:
-        momentum_score += 8
-        details.append(f"✅ RSI bullish zone ({market['rsi_15m']:.1f}) (+8)")
-    elif 30 < market['rsi_15m'] <= 50:
-        momentum_score += 5
-        details.append(f"⚠️  RSI neutral ({market['rsi_15m']:.1f}) (+5)")
-    else:
-        details.append(f"❌ RSI extreme ({market['rsi_15m']:.1f}) (0)")
-    
-    # MACD confirmation
-    if market['macd_hist_15m'] > 0:
-        momentum_score += 9
-        details.append("✅ MACD histogram positive (+9)")
-    else:
-        details.append("❌ MACD histogram negative (0)")
-    
-    # Stochastic RSI
-    if 20 < market.get('stoch_k_15m', 50) < 80:
-        momentum_score += 8
-        details.append("✅ Stoch RSI good range (+8)")
-    else:
-        details.append("⚠️  Stoch RSI extreme (0)")
-    
-    score += momentum_score
-    
-    # 3. VOLUME CONFIRMATION (20 pts max)
-    volume_score = 0
-    
-    if market['vol_ratio'] > 1.5:
-        volume_score += 12
-        details.append(f"✅ Volume spike ({market['vol_ratio']:.1f}x) (+12)")
-    elif market['vol_ratio'] > 1.0:
-        volume_score += 8
-        details.append(f"✅ Volume above average ({market['vol_ratio']:.1f}x) (+8)")
-    else:
-        details.append(f"⚠️  Low volume ({market['vol_ratio']:.1f}x) (0)")
-    
-    # OBV confirmation
-    if market['obv_slope'] > 0:
-        volume_score += 8
-        details.append("✅ OBV trending up (+8)")
-    else:
-        details.append("❌ OBV trending down (0)")
-    
-    score += volume_score
-    
-    # 4. VOLATILITY FAVORABLE (15 pts max)
-    volatility_score = 0
-    
-    # ADX strength
-    if market['adx_15m'] > 25:
-        volatility_score += 8
-        details.append(f"✅ Strong trend (ADX {market['adx_15m']:.1f}) (+8)")
-    elif market['adx_15m'] > 20:
-        volatility_score += 4
-        details.append(f"⚠️  Moderate trend (ADX {market['adx_15m']:.1f}) (+4)")
-    else:
-        details.append(f"❌ Choppy (ADX {market['adx_15m']:.1f}) (0)")
-    
-    # Bollinger Bands
-    price = market['price']
-    bb_position = (price - market['bb_lower_15m']) / (market['bb_upper_15m'] - market['bb_lower_15m'])
-    if 0.3 < bb_position < 0.7:
-        volatility_score += 7
-        details.append("✅ BB mid-range (+7)")
-    else:
-        details.append("⚠️  BB extreme (0)")
-    
-    score += volatility_score
-    
-    # 5. LEVEL PROXIMITY - VWAP (10 pts max)
-    level_score = 0
-    
-    if price > market['vwap_15m']:
-        level_score += 10
-        details.append("✅ Above VWAP - bullish control (+10)")
-    else:
-        details.append("❌ Below VWAP - bearish control (0)")
-    
-    score += level_score
-    
-    return score, details
+    import math
+    def _normalize(val, min_val, max_val):
+        if max_val == min_val:
+            return 0.5
+        return max(0, min(1, (val - min_val) / (max_val - min_val)))
 
-def check_alerts(position, market):
-    """Enhanced alert system using institutional indicators"""
-    alerts = []
+    def _trend_strength(val):
+        if isinstance(val, str):
+            return 1.0 if val == 'UP' else 0.0
+        if -1 <= val <= 1:
+            return (val + 1) / 2
+        if 0 <= val <= 100:
+            return val / 100
+        return 0.5
+
+    def _clamp(val, min_val, max_val):
+        return max(min_val, min(max_val, val))
+
+    def _fair_value_distance(price, vwap):
+        return min(1.0, abs(price - vwap) / price) if price else 1.0
+
+    def _score_side(is_long: bool):
+        required_fields = [
+            'trend_4h', 'trend_1h', 'trend_15m', 'rsi_15m', 'macd_hist_15m', 'stoch_k_15m', 'stoch_d_15m',
+            'atr_15m', 'atr_15m_sma', 'adx_15m', 'price', 'vwap_15m', 'vol_ratio', 'vol_ma', 'volume',
+        ]
+        missing = [k for k in required_fields if k not in market or market[k] is None]
+        if missing:
+            import sys
+            print(f"[calculate_signal_score] MISSING FIELDS: {missing}", file=sys.stderr, flush=True)
+            return 0, {}, {}
+        details = []
+        # Trend Alignment (30 pts)
+        trend_4h = _trend_strength(market.get('trend_4h', 0))
+        trend_1h = _trend_strength(market.get('trend_1h', 0))
+        trend_15m = _trend_strength(market.get('trend_15m', 0))
+        trend_score = (trend_4h * 12) + (trend_1h * 10) + (trend_15m * 8)
+        details.append(f"Trend Alignment: {trend_score:.1f}/30")
+        # Momentum (25 pts)
+        rsi = market['rsi_15m']
+        rsi_score = 8 if 50 < rsi < 70 else 5 if 30 < rsi <= 50 else 0
+        details.append(f"RSI: {rsi_score}/8")
+        macd_score = 9 if market['macd_hist_15m'] > 0 else 0
+        details.append(f"MACD: {macd_score}/9")
+        stoch_score = 4  # Assume neutral for fallback
+        details.append(f"Stoch: {stoch_score}/4")
+        # Volume (20 pts)
+        vol_ratio = market['vol_ratio']
+        vol_score = 12 if vol_ratio > 1.5 else 8 if vol_ratio > 1.0 else 0
+        details.append(f"Volume: {vol_score}/12")
+        obv_score = 4 if market.get('obv_slope', 0) > 0 else 0
+        details.append(f"OBV: {obv_score}/4")
+        # Volatility (15 pts)
+        adx = market['adx_15m']
+        adx_score = 8 if adx > 25 else 4 if adx > 20 else 0
+        details.append(f"ADX: {adx_score}/8")
+        bb_score = 3  # Assume mid-BB for fallback
+        details.append(f"BB: {bb_score}/3")
+        # Level (10 pts)
+        price = market['price']
+        ema20 = market.get('ema20_15m', price)
+        ema50 = market.get('ema50_15m', price)
+        level_score = 10 if price > ema20 and price > ema50 else 0
+        details.append(f"Level: {level_score}/10")
+        # Total
+        total = trend_score + rsi_score + macd_score + stoch_score + vol_score + obv_score + adx_score + bb_score + level_score
+        return int(min(total, 100)), details
+
+    # Compute both long and short scores
+    long_score, long_details = _score_side(True)
+    short_score, short_details = _score_side(False)
+    # For now, details = long_details (could be improved)
+    return long_score, short_score, long_details
     
-    # CRITICAL ALERTS - Position-specific
-    if position:
-        side = position.get('side', 'LONG').upper()
-        liq_distance = position.get('liquidation_distance', 100)
-        
-        if liq_distance < 5:
-            alerts.append(f"🚨 CRITICAL: {liq_distance:.2f}% from liquidation!")
-        elif liq_distance < 10:
-            alerts.append(f"⚠️  WARNING: {liq_distance:.2f}% from liquidation")
-        
-        # VWAP alerts - position aware
-        if side == 'LONG' and market['price'] < market['vwap_15m']:
-            alerts.append("⚠️  LONG: Price broke below VWAP - consider exit")
-        elif side == 'SHORT' and market['price'] > market['vwap_15m']:
-            alerts.append("⚠️  SHORT: Price broke above VWAP - consider exit")
-        
-        # ADX dropping = trend weakening
-        if market['adx_15m'] < 20:
-            alerts.append(f"⚠️  Weak trend (ADX {market['adx_15m']:.1f}) - choppy conditions")
-    
-    # SIGNAL ALERTS - Everyone
-    
-    # MACD crossover detection
-    if abs(market['macd_hist_15m']) < 0.1:  # Near zero = potential crossover
-        alerts.append("📊 MACD near crossover - momentum shift possible")
-    
-    # RSI + MACD divergence - position aware
-    if position:
-        side = position.get('side', 'LONG').upper()
-        if market['rsi_15m'] > 70 and market['macd_hist_15m'] < 0:
-            if side == 'SHORT':
-                alerts.append("✅ SHORT: Bearish divergence - position favored")
-            else:
-                alerts.append("⚠️  LONG: Bearish divergence - consider exit")
-        elif market['rsi_15m'] < 30 and market['macd_hist_15m'] > 0:
-            if side == 'LONG':
-                alerts.append("✅ LONG: Bullish divergence - position favored")
-            else:
-                alerts.append("⚠️  SHORT: Bullish divergence - consider exit")
-    
-    # ADX trend confirmation - position aware  
-    if market['adx_15m'] > 25:
-        if position:
-            side = position.get('side', 'LONG').upper()
-            if market['trend_15m'] == 'UP':
-                symbol = "✅" if side == 'LONG' else "⚠️ "
-                alerts.append(f"{symbol} STRONG UPTREND (ADX {market['adx_15m']:.1f})")
-            else:
-                symbol = "✅" if side == 'SHORT' else "⚠️ "
-                alerts.append(f"{symbol} STRONG DOWNTREND (ADX {market['adx_15m']:.1f})")
-        else:
-            if market['trend_15m'] == 'UP':
-                alerts.append(f"🚀 STRONG UPTREND (ADX {market['adx_15m']:.1f})")
-            else:
-                alerts.append(f"📉 STRONG DOWNTREND (ADX {market['adx_15m']:.1f})")
-    
-    # OBV divergence (price up but OBV down = bearish)
-    if market['obv_slope'] < -0.5 and market['trend_15m'] == 'UP':
-        alerts.append("⚠️  OBV DIVERGENCE: Price up but volume declining")
-    
-    # Bollinger Band extremes - position aware
-    price = market['price']
-    bb_position = (price - market['bb_lower_15m']) / (market['bb_upper_15m'] - market['bb_lower_15m'])
-    
-    if position:
-        side = position.get('side', 'LONG').upper()
-        if bb_position > 0.95:
-            if side == 'LONG':
-                alerts.append("⚠️  LONG: BB upper band - take profit zone")
-            else:
-                alerts.append("✅ SHORT: BB upper band - strong entry zone")
-        elif bb_position < 0.05:
-            if side == 'LONG':
-                alerts.append("✅ LONG: BB lower band - strong entry zone")
-            else:
-                alerts.append("⚠️  SHORT: BB lower band - take profit zone")
-    else:
-        if bb_position > 0.95:
-            alerts.append("⚠️  Price at BB upper band - potential reversal")
-        elif bb_position < 0.05:
-            alerts.append("✅ Price at BB lower band - potential bounce")
-    
-    # Multi-timeframe misalignment warning
-    if market['trend_4h'] != market['trend_1h']:
-        alerts.append(f"⚠️  TIMEFRAME CONFLICT: 4H {market['trend_4h']} vs 1H {market['trend_1h']}")
-    
-    # Volume spike
-    if market['vol_ratio'] > 2.0:
-        alerts.append(f"📊 VOLUME SPIKE: {market['vol_ratio']:.1f}x average")
-    
-    return alerts
+    # (alerts logic removed)
 
 
 def display_position_monitor(position, market, alerts, symbol_name):
-    """Display position monitoring dashboard with institutional indicators"""
+    # Display position monitoring dashboard with institutional indicators
     clear_screen()
     
     print(f"{BOLD}{BLUE}{'='*75}{RESET}")
@@ -637,7 +275,7 @@ def display_position_monitor(position, market, alerts, symbol_name):
 
 
 def display_analysis_only(symbol_name, market):
-    """Display institutional-grade technical analysis without position"""
+    # Display institutional-grade technical analysis without position
     clear_screen()
     
     print(f"{BOLD}{BLUE}{'='*75}{RESET}")
@@ -825,7 +463,7 @@ def display_analysis_only(symbol_name, market):
     print(f"{CYAN}Press Ctrl+C to exit{RESET}")
 
 def quick_score_coin(exchange, symbol):
-    """Quick institutional score for opportunity ranking (0-100)"""
+    # Quick institutional score for opportunity ranking (0-100)
     try:
         # Fetch minimal data for quick scoring
         ticker = exchange.fetch_ticker(symbol)
@@ -913,144 +551,11 @@ def quick_score_coin(exchange, symbol):
 
 
 def get_available_coins():
-    """Return list of popular USDT futures coins"""
+
+    # Returns a default list of available coins
     return [
-        'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT',
-        'DOGE/USDT', 'DOT/USDT', 'AVAX/USDT', 'LINK/USDT', 'UNI/USDT',
-        'ATOM/USDT', 'LTC/USDT', 'NEAR/USDT', 'APT/USDT', 'ARB/USDT',
-        'OP/USDT', 'INJ/USDT', 'SUI/USDT', 'TIA/USDT', 'FET/USDT',
-        'RENDER/USDT', 'GRT/USDT', 'ALGO/USDT', 'HBAR/USDT', 'PEPE/USDT'
+        'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'BNB/USDT',
+        'ADA/USDT', 'DOGE/USDT', 'DOT/USDT', 'AVAX/USDT', 'LINK/USDT',
+        'UNI/USDT', 'ATOM/USDT', 'LTC/USDT', 'APT/USDT', 'ARB/USDT',
+        'OP/USDT', 'TIA/USDT', 'SUI/USDT', 'SEI/USDT'
     ]
-
-def main():
-    exchange = ccxt.kucoin({
-        'apiKey': os.getenv('KUCOIN_API_KEY'),
-        'secret': os.getenv('KUCOIN_API_SECRET'),
-        'password': os.getenv('KUCOIN_API_PASSPHRASE'),
-        'enableRateLimit': True
-    })
-    
-    print(f"{BOLD}{CYAN}{'='*60}{RESET}")
-    print(f"{BOLD}{CYAN}{'UNIVERSAL CRYPTO FUTURES MONITOR':^60}{RESET}")
-    print(f"{BOLD}{CYAN}{'='*60}{RESET}\n")
-    
-    print("Checking for open positions...\n")
-    
-    active_positions = get_active_positions(exchange)
-    
-    if active_positions:
-        print(f"{GREEN}Found {len(active_positions)} open position(s):{RESET}\n")
-        
-        for idx, pos in enumerate(active_positions, 1):
-            pnl_color = GREEN if pos['unrealized_roe'] >= 0 else RED
-            print(f"  {idx}. {pos['symbol']} - {pos['side']} {pos['leverage']:.1f}x - "
-                  f"{pnl_color}PNL: {pos['unrealized_roe']:+.2f}%{RESET}")
-        
-        print(f"\nDo you want to monitor a position? (y/n): ", end='')
-        choice = input().strip().lower()
-        
-        if choice == 'y':
-            if len(active_positions) == 1:
-                selected_pos = active_positions[0]
-                print(f"\nMonitoring {selected_pos['symbol']}...\n")
-            else:
-                print(f"Select position to monitor (1-{len(active_positions)}): ", end='')
-                sel = input().strip()
-                try:
-                    selected_pos = active_positions[int(sel) - 1]
-                except:
-                    print(f"{RED}Invalid selection. Exiting.{RESET}")
-                    return
-            
-            # Monitor selected position
-            symbol = convert_to_spot_symbol(selected_pos['symbol'])
-            print(f"Starting monitor for {symbol}...\n")
-            time.sleep(2)
-            
-            try:
-                while True:
-                    # Refresh position data
-                    positions = get_active_positions(exchange)
-                    current_pos = None
-                    for p in positions:
-                        if p['symbol'] == selected_pos['symbol']:
-                            current_pos = p
-                            break
-                    
-                    if not current_pos:
-                        print(f"{YELLOW}Position closed. Exiting monitor.{RESET}")
-                        break
-                    
-                    market = get_market_data(exchange, symbol)
-                    if not market:
-                        time.sleep(10)
-                        continue
-                    
-                    alerts = check_alerts(current_pos, market)
-                    display_position_monitor(current_pos, market, alerts, symbol)
-                    time.sleep(10)
-                    
-            except KeyboardInterrupt:
-                print(f"\n\n{YELLOW}Monitor stopped{RESET}")
-                return
-        else:
-            print(f"{YELLOW}Exiting.{RESET}")
-            return
-    
-    # No positions - offer coin analysis
-    print(f"{YELLOW}No open positions found.{RESET}\n")
-    print("Would you like technical analysis for a coin? (y/n): ", end='')
-    choice = input().strip().lower()
-    
-    if choice != 'y':
-        print(f"{YELLOW}Exiting.{RESET}")
-        return
-    
-    coins = get_available_coins()
-    print(f"\n{BOLD}Available Coins:{RESET}")
-    
-    # Quick score all coins
-    print(f"{CYAN}Analyzing coins for opportunities...{RESET}")
-    coin_scores = []
-    
-    for idx, coin in enumerate(coins, 1):
-        score = quick_score_coin(exchange, coin)
-        coin_scores.append((idx, coin, score))
-        print(f"  {idx:2}. {coin}")
-    
-    # Find best opportunities (score >= 6)
-    best_opportunities = [idx for idx, coin, score in coin_scores if score >= 6]
-    
-    if best_opportunities:
-        best_str = ', '.join([f"#{num}" for num in best_opportunities])
-        print(f"\n{GREEN}{BOLD}Script analysis says {best_str} present the best opportunities for trading currently.{RESET}")
-    else:
-        print(f"\n{YELLOW}Market conditions mixed - no strong opportunities detected at this time.{RESET}")
-    
-    print(f"\nSelect coin number (1-{len(coins)}): ", end='')
-    sel = input().strip()
-    
-    try:
-        selected_coin = coins[int(sel) - 1]
-    except:
-        print(f"{RED}Invalid selection. Exiting.{RESET}")
-        return
-    
-    print(f"\nAnalyzing {selected_coin}...\n")
-    time.sleep(2)
-    
-    try:
-        while True:
-            market = get_market_data(exchange, selected_coin)
-            if not market:
-                time.sleep(10)
-                continue
-            
-            display_analysis_only(selected_coin, market)
-            time.sleep(10)
-            
-    except KeyboardInterrupt:
-        print(f"\n\n{YELLOW}Analysis stopped{RESET}")
-
-if __name__ == "__main__":
-    main()

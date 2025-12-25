@@ -26,3 +26,24 @@ ta-lib/
 # System files
 .DS_Store
 *.log
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Sensitive data files
+deep_spider_output.json
+trace_log.json
+full_card_data.json
+valid_cards.txt
+
+# Scraping/automation tools
+deep_spider.js
+extract_cards_from_browser.js
+get_full_cards.js
+gmail_login.js
+trace_activation_redirect.js
+luhn_bruteforce.py
+
+# Playwright/browser automation
+burp_playwright.py

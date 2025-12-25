@@ -3,6 +3,19 @@
 import ccxt
 from dotenv import load_dotenv
 import os
+import sys
+from datetime import datetime
+
+# RAM Protection
+sys.path.insert(0, '/home/hektic/saddynhektic workspace')
+try:
+    from Tools.resource_manager import check_ram_before_processing
+    check_ram_before_processing(min_free_gb=1.5)
+except ImportError:
+    print("⚠️  Warning: RAM protection not available")
+except MemoryError as e:
+    print(f"❌ Insufficient RAM: {e}")
+    exit(1)
 
 load_dotenv()
 
@@ -13,11 +26,17 @@ def check_positions():
         'secret': os.getenv('KUCOIN_API_SECRET'),
         'password': os.getenv('KUCOIN_API_PASSPHRASE'),
         'enableRateLimit': True,
+        'options': {
+            'defaultType': 'swap',
+        }
     })
     
     try:
-        # Fetch all positions
+        # Fetch all positions (force fresh data)
         positions = exchange.fetch_positions()
+        
+        # Also get account info for P&L
+        account = exchange.fetch_balance()
         
         # Filter for active positions
         active_positions = [p for p in positions if float(p.get('contracts', 0)) != 0]
@@ -29,6 +48,7 @@ def check_positions():
         print("\n╔═══════════════════════════════════════════════════════╗")
         print("║         KUCOIN FUTURES - PROFESSIONAL ADVISOR         ║")
         print("╚═══════════════════════════════════════════════════════╝\n")
+        print(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         
         for pos in active_positions:
             symbol = pos.get('symbol', 'N/A')
@@ -39,9 +59,20 @@ def check_positions():
             current = float(pos.get('markPrice') or 0)
             leverage = float(pos.get('leverage') or 0)
             pnl = float(pos.get('unrealizedPnl') or 0)
-            pnl_pct = float(pos.get('percentage') or 0)
-            liq = float(pos.get('liquidationPrice') or 0)
             margin = float(pos.get('initialMargin') or 0)
+            liq = float(pos.get('liquidationPrice') or 0)
+            
+            # Calculate ROE percentage properly
+            if margin > 0:
+                pnl_pct = (pnl / margin) * 100
+            else:
+                pnl_pct = 0
+            
+            # Calculate price movement
+            if entry > 0:
+                price_change_pct = ((current - entry) / entry) * 100
+            else:
+                price_change_pct = 0
             
             # Color based on PnL
             color = '\033[92m' if pnl > 0 else '\033[91m'
@@ -55,7 +86,8 @@ def check_positions():
             print(f"Margin:       ${margin:.2f}")
             print(f"Entry:        ${entry:.4f}")
             print(f"Mark Price:   ${current:.4f}")
-            print(f"{color}Unrealized:   ${pnl:.2f} ({pnl_pct:.2f}%){reset}")
+            print(f"Price Move:   {price_change_pct:+.2f}%")
+            print(f"{color}Unrealized:   ${pnl:+.4f} ({pnl_pct:+.2f}% ROE){reset}")
             print(f"Liquidation:  ${liq:.4f}")
             print("-" * 55)
                 

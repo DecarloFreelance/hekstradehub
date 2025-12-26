@@ -116,26 +116,24 @@ class Config:
     def check_dependencies(cls) -> Tuple[bool, list]:
         """Check if required Python packages are installed"""
         missing = []
+        # List of (package_name, import_name) tuples
         required_packages = [
-            'ccxt',
-            'pandas',
-            'numpy',
-            'dotenv',
+            ('ccxt', 'ccxt'),
+            ('pandas', 'pandas'),
+            ('numpy', 'numpy'),
+            ('python-dotenv', 'dotenv'),
         ]
         
-        for package in required_packages:
+        for package_name, import_name in required_packages:
             try:
-                if package == 'dotenv':
-                    __import__('dotenv')
-                else:
-                    __import__(package)
+                __import__(import_name)
             except ImportError:
-                missing.append(package)
+                missing.append(package_name)
         
         return (len(missing) == 0, missing)
     
     @classmethod
-    def get_kucoin_config(cls) -> Dict[str, str]:
+    def get_kucoin_config(cls) -> Dict:
         """Get KuCoin API configuration for ccxt"""
         return {
             'apiKey': cls.KUCOIN_API_KEY,
@@ -234,8 +232,7 @@ class Config:
 
 def main():
     """Run configuration diagnostics"""
-    config = Config()
-    is_ready = config.print_diagnostics()
+    is_ready = Config.print_diagnostics()
     
     # Exit with appropriate code
     sys.exit(0 if is_ready else 1)

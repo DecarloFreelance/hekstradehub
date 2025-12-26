@@ -19,14 +19,31 @@ except MemoryError as e:
 
 load_dotenv()
 
+# Modern colors
+PURPLE = '\033[95m'
+BLUE = '\033[94m'
+CYAN = '\033[96m'
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+RED = '\033[91m'
+ORANGE = '\033[38;5;208m'
+LIME = '\033[38;5;154m'
+TEAL = '\033[38;5;51m'
+LAVENDER = '\033[38;5;183m'
+BOLD = '\033[1m'
+DIM = '\033[2m'
+RESET = '\033[0m'
+
 def check_api_credentials():
     """Check if API credentials are configured"""
     if not os.path.exists('.env'):
-        print("❌ No .env file found!")
-        print("\n📋 To use trading features, you need to configure your API credentials:")
-        print("   1. Copy .env.example to .env")
-        print("   2. Add your KuCoin API credentials")
-        print("   3. Or run: ./setup.sh")
+        print(f"\n{RED}{'─' * 70}{RESET}")
+        print(f"{BOLD}{RED}  ❌ No .env file found!{RESET}")
+        print(f"\n{YELLOW}  📋 To use trading features, configure your API credentials:{RESET}")
+        print(f"{LIME}     1.{RESET} Copy .env.example to .env")
+        print(f"{LIME}     2.{RESET} Add your KuCoin API credentials")
+        print(f"{LIME}     3.{RESET} Or run: {BOLD}./setup.sh{RESET}")
+        print(f"\n{RED}{'─' * 70}{RESET}\n")
         return False
     
     api_key = os.getenv('KUCOIN_API_KEY')
@@ -34,11 +51,13 @@ def check_api_credentials():
     api_pass = os.getenv('KUCOIN_API_PASSPHRASE')
     
     if not api_key or not api_secret or not api_pass:
-        print("❌ API credentials not configured in .env file!")
-        print("\n📋 Please add your KuCoin API credentials to .env:")
-        print("   KUCOIN_API_KEY=your_key")
-        print("   KUCOIN_API_SECRET=your_secret")
-        print("   KUCOIN_API_PASSPHRASE=your_passphrase")
+        print(f"\n{RED}{'─' * 70}{RESET}")
+        print(f"{BOLD}{RED}  ❌ API credentials not configured in .env!{RESET}")
+        print(f"\n{YELLOW}  📋 Add your KuCoin API credentials:{RESET}")
+        print(f"{DIM}     KUCOIN_API_KEY=your_key{RESET}")
+        print(f"{DIM}     KUCOIN_API_SECRET=your_secret{RESET}")
+        print(f"{DIM}     KUCOIN_API_PASSPHRASE=your_passphrase{RESET}")
+        print(f"\n{RED}{'─' * 70}{RESET}\n")
         return False
     
     return True
@@ -70,13 +89,16 @@ def check_positions():
         active_positions = [p for p in positions if float(p.get('contracts', 0)) != 0]
         
         if not active_positions:
-            print("\n✓ No open positions found.")
+            print(f"\n{TEAL}{'═' * 70}{RESET}")
+            print(f"{BOLD}{GREEN}  ✓ No open positions found{RESET}")
+            print(f"{TEAL}{'═' * 70}{RESET}\n")
             return
         
-        print("\n╔═══════════════════════════════════════════════════════╗")
-        print("║         KUCOIN FUTURES - PROFESSIONAL ADVISOR         ║")
-        print("╚═══════════════════════════════════════════════════════╝\n")
-        print(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        # Header
+        print(f"\n{TEAL}{'═' * 70}{RESET}")
+        print(f"{BOLD}{LAVENDER}         📊 KUCOIN FUTURES - POSITION MONITOR 📊{RESET}")
+        print(f"{TEAL}{'═' * 70}{RESET}")
+        print(f"{DIM}Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{RESET}\n")
         
         for pos in active_positions:
             symbol = pos.get('symbol', 'N/A')
@@ -102,22 +124,39 @@ def check_positions():
             else:
                 price_change_pct = 0
             
-            # Color based on PnL
-            color = '\033[92m' if pnl > 0 else '\033[91m'
-            reset = '\033[0m'
-            bold = '\033[1m'
+            # Color based on PnL and side
+            pnl_color = GREEN if pnl > 0 else RED
+            side_color = LIME if side == 'LONG' else ORANGE
             
-            print(f"{bold}═══ {symbol} ═══{reset}")
-            print(f"Position:     {side} {leverage}x")
-            print(f"Contracts:    {contracts}")
-            print(f"Notional:     ${notional:.2f}")
-            print(f"Margin:       ${margin:.2f}")
-            print(f"Entry:        ${entry:.4f}")
-            print(f"Mark Price:   ${current:.4f}")
-            print(f"Price Move:   {price_change_pct:+.2f}%")
-            print(f"{color}Unrealized:   ${pnl:+.4f} ({pnl_pct:+.2f}% ROE){reset}")
-            print(f"Liquidation:  ${liq:.4f}")
-            print("-" * 55)
+            # Position card
+            print(f"{PURPLE}╭{'─' * 68}╮{RESET}")
+            print(f"{PURPLE}│{RESET} {BOLD}{side_color}{symbol}{RESET}{' ' * (66 - len(symbol))}│")
+            print(f"{PURPLE}├{'─' * 68}┤{RESET}")
+            
+            print(f"{PURPLE}│{RESET}  {BOLD}Position:{RESET} {side_color}{side}{RESET} {YELLOW}{leverage}x{RESET}{' ' * (48 - len(side) - len(str(leverage)))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Contracts:{RESET} {CYAN}{contracts:.1f}{RESET}{' ' * (52 - len(f'{contracts:.1f}'))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Notional:{RESET} {CYAN}${notional:.2f}{RESET}{' ' * (53 - len(f'${notional:.2f}'))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Margin:{RESET} {CYAN}${margin:.2f}{RESET}{' ' * (56 - len(f'${margin:.2f}'))}│")
+            print(f"{PURPLE}│{RESET}{' ' * 68}│")
+            
+            print(f"{PURPLE}│{RESET}  {BOLD}Entry Price:{RESET} {LAVENDER}${entry:.4f}{RESET}{' ' * (49 - len(f'${entry:.4f}'))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Mark Price:{RESET} {LAVENDER}${current:.4f}{RESET}{' ' * (50 - len(f'${current:.4f}'))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Price Move:{RESET} {pnl_color}{price_change_pct:+.2f}%{RESET}{' ' * (50 - len(f'{price_change_pct:+.2f}%'))}│")
+            print(f"{PURPLE}│{RESET}{' ' * 68}│")
+            
+            print(f"{PURPLE}│{RESET}  {BOLD}Unrealized P&L:{RESET} {pnl_color}${pnl:+.4f} ({pnl_pct:+.2f}% ROE){RESET}{' ' * (34 - len(f'${pnl:+.4f} ({pnl_pct:+.2f}% ROE)'))}│")
+            print(f"{PURPLE}│{RESET}  {BOLD}Liquidation:{RESET} {RED}${liq:.4f}{RESET}{' ' * (49 - len(f'${liq:.4f}'))}│")
+            print(f"{PURPLE}╰{'─' * 68}╯{RESET}\n")
+        
+        # Summary footer
+        total_pnl = sum(float(p.get('unrealizedPnl', 0)) for p in active_positions)
+        total_margin = sum(float(p.get('initialMargin', 0)) for p in active_positions)
+        total_pnl_pct = (total_pnl / total_margin * 100) if total_margin > 0 else 0
+        summary_color = GREEN if total_pnl > 0 else RED
+        
+        print(f"{TEAL}{'─' * 70}{RESET}")
+        print(f"{BOLD}Total Unrealized P&L:{RESET} {summary_color}${total_pnl:+.4f} ({total_pnl_pct:+.2f}%){RESET}")
+        print(f"{TEAL}{'═' * 70}{RESET}\n")
                 
     except Exception as e:
         print(f"Error fetching positions: {e}")

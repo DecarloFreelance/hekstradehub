@@ -16,14 +16,22 @@ try:
     DOTENV_AVAILABLE = True
 except ImportError:
     DOTENV_AVAILABLE = False
-    # If dotenv not available, still try to read .env manually
-    if Path('.env').exists():
-        with open('.env') as f:
+    # If dotenv not available, manually parse .env file
+    env_file = Path('.env')
+    if env_file.exists():
+        with open(env_file) as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
-                    os.environ[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+                    # Remove quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
+                    os.environ[key] = value
 
 class ConfigError(Exception):
     """Configuration validation error"""

@@ -4,18 +4,29 @@ Professional crypto trading advisor for KuCoin Futures with automated risk manag
 
 ## 🚀 Quick Start
 
-### First-Time Setup
+### Desktop/Linux Setup
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/DecarloFreelance/hekstradehub.git
 cd hekstradehub
 ./setup.sh
 ```
 
+### 📱 Android/Termux Setup
+
+```bash
+pkg install -y git && \
+git clone https://github.com/DecarloFreelance/hekstradehub.git && \
+cd hekstradehub && \
+bash setup-termux.sh
+```
+
+📖 **[Full Termux Guide](docs/TERMUX_GUIDE.md)** - Run crypto trading on your phone!
+
 The interactive setup wizard will:
 - Check system requirements
 - Create virtual environment
-- Install dependencies
+- Install dependencies (including TA-Lib)
 - Configure API credentials
 - Guide you through the system
 

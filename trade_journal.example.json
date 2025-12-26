@@ -1,0 +1,18 @@
+[
+  {
+    "trade_id": 1,
+    "timestamp": "2025-12-25 00:00:00",
+    "symbol": "EXAMPLE/USDT:USDT",
+    "side": "LONG",
+    "entry_price": 1.0000,
+    "exit_price": 1.0500,
+    "contracts": 10,
+    "leverage": 10,
+    "margin": 1.00,
+    "notional": 10.00,
+    "status": "EXAMPLE",
+    "notes": "This is an example trade journal entry. Your actual trades will be logged here.",
+    "gross_pnl": 0.50,
+    "roi_percent": 50.0
+  }
+]

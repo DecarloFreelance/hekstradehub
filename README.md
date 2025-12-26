@@ -171,8 +171,41 @@ Active development focuses on:
 - Enhanced risk management
 - Performance tracking
 
+## 🤝 Contributing
+
+Contributions are welcome! Whether it's bug fixes, new features, or documentation improvements.
+
+**Ways to contribute:**
+- 🐛 Report bugs via [Issues](https://github.com/DecarloFreelance/hekstradehub/issues)
+- 💡 Suggest features or improvements
+- 🔧 Submit pull requests
+- 📖 Improve documentation
+- ⭐ Star the repo if you find it useful!
+
+**Development setup:**
+```bash
+git clone https://github.com/DecarloFreelance/hekstradehub.git
+cd hekstradehub
+./setup.sh
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
 ---
 
-**Author**: HekTic
-**Platform**: KuCoin Futures
+## 👨‍💻 Author
+
+**HekTic**
+- GitHub: [@DecarloFreelance](https://github.com/DecarloFreelance)
+- Email: decarlofreelance@gmail.com
+
+## 📄 License & Disclaimer
+
+This software is provided "as is" for educational purposes. Cryptocurrency trading carries significant risk. Always:
+- Test strategies with small amounts first
+- Never invest more than you can afford to lose
+- Understand the risks before automated trading
+- Keep API keys secure
+
+**Platform**: KuCoin Futures  
 **Status**: Production Ready

@@ -301,11 +301,12 @@ echo ""
 read -p "Run a quick system test? (Y/n): " run_test
 
 if [[ ! $run_test =~ ^[Nn]$ ]]; then
-    print_info "Testing position check..."
-    if python monitoring/check_position.py 2>/dev/null; then
+    print_info "Running comprehensive configuration check..."
+    if python config.py; then
         print_success "System test passed!"
     else
-        print_warning "Test completed with warnings (this is normal if you have no positions)"
+        print_warning "System has some warnings. Please review the output above."
+        print_info "You can run './config.guess' anytime to check system status"
     fi
 fi
 
@@ -319,13 +320,15 @@ echo ""
 echo -e "${BOLD}Next Steps:${NC}"
 echo ""
 echo "1. ${CYAN}Review your .env file${NC} and ensure API credentials are correct"
-echo "2. ${CYAN}Run ./trade${NC} to launch the main dashboard"
-echo "3. ${CYAN}Check out docs/README.md${NC} for detailed documentation"
-echo "4. ${CYAN}Start with small positions${NC} to learn the system"
+echo "2. ${CYAN}Run ./config.guess${NC} to validate your configuration"
+echo "3. ${CYAN}Run ./trade${NC} to launch the main dashboard"
+echo "4. ${CYAN}Check out docs/README.md${NC} for detailed documentation"
+echo "5. ${CYAN}Start with small positions${NC} to learn the system"
 echo ""
 echo -e "${BOLD}Useful Commands:${NC}"
-echo "  ${GREEN}./trade${NC}   - Main trading dashboard"
-echo "  ${GREEN}./status${NC}  - Quick position overview"
+echo "  ${GREEN}./config.guess${NC}   - Check system configuration"
+echo "  ${GREEN}./trade${NC}          - Main trading dashboard"
+echo "  ${GREEN}./status${NC}         - Quick position overview"
 echo "  ${GREEN}python analysis/find_opportunity.py${NC} - Find trading opportunities"
 echo ""
 echo -e "${BOLD}Documentation:${NC}"

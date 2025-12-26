@@ -138,13 +138,32 @@ python automation/auto_trailing_stop.py ATOM/USDT:USDT LONG 1.9910 1.99 1.5 1.0
 
 ## ⚙️ Configuration
 
-1. Copy `.env.example` to `.env` (if exists)
-2. Add your KuCoin API credentials:
+### Quick Setup
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and add your KuCoin API credentials:
    ```
    KUCOIN_API_KEY=your_key
    KUCOIN_API_SECRET=your_secret
    KUCOIN_API_PASSPHRASE=your_passphrase
    ```
+
+### Configuration Validation
+Check your system configuration at any time:
+```bash
+./config.guess
+# or
+python config.py
+```
+
+This will validate:
+- ✓ Python version and system info
+- ✓ Required dependencies installed
+- ✓ API credentials configured
+- ✓ API connection working
+- ✓ Safety settings (leverage, position size, etc.)
 
 ## 🛡️ Safety Features
 

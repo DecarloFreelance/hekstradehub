@@ -27,6 +27,25 @@ from core.indicators import (
 
 load_dotenv()
 
+def check_api_credentials():
+    """Check if API credentials are configured"""
+    if not os.path.exists('.env'):
+        print("❌ No .env file found!")
+        print("\n📋 To use this feature, configure your API credentials:")
+        print("   Run: ./setup.sh")
+        return False
+    
+    api_key = os.getenv('KUCOIN_API_KEY')
+    api_secret = os.getenv('KUCOIN_API_SECRET')
+    api_pass = os.getenv('KUCOIN_API_PASSPHRASE')
+    
+    if not api_key or not api_secret or not api_pass:
+        print("❌ API credentials not configured!")
+        print("\n📋 Add your KuCoin API credentials to .env")
+        return False
+    
+    return True
+
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
@@ -241,4 +260,6 @@ def find_opportunities():
         print(f"\n{BOLD}{GREEN}{'='*70}{RESET}\n")
 
 if __name__ == '__main__':
+    if not check_api_credentials():
+        sys.exit(1)
     find_opportunities()

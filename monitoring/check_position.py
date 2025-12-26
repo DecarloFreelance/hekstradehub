@@ -19,7 +19,35 @@ except MemoryError as e:
 
 load_dotenv()
 
+def check_api_credentials():
+    """Check if API credentials are configured"""
+    if not os.path.exists('.env'):
+        print("❌ No .env file found!")
+        print("\n📋 To use trading features, you need to configure your API credentials:")
+        print("   1. Copy .env.example to .env")
+        print("   2. Add your KuCoin API credentials")
+        print("   3. Or run: ./setup.sh")
+        return False
+    
+    api_key = os.getenv('KUCOIN_API_KEY')
+    api_secret = os.getenv('KUCOIN_API_SECRET')
+    api_pass = os.getenv('KUCOIN_API_PASSPHRASE')
+    
+    if not api_key or not api_secret or not api_pass:
+        print("❌ API credentials not configured in .env file!")
+        print("\n📋 Please add your KuCoin API credentials to .env:")
+        print("   KUCOIN_API_KEY=your_key")
+        print("   KUCOIN_API_SECRET=your_secret")
+        print("   KUCOIN_API_PASSPHRASE=your_passphrase")
+        return False
+    
+    return True
+
 def check_positions():
+    # Check credentials first
+    if not check_api_credentials():
+        return
+    
     # Initialize KuCoin Futures
     exchange = ccxt.kucoinfutures({
         'apiKey': os.getenv('KUCOIN_API_KEY'),

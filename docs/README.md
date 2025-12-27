@@ -44,6 +44,16 @@ KUCOIN_API_SECRET=your_api_secret
 KUCOIN_API_PASSPHRASE=your_passphrase
 ```
 
+For detailed configuration guide, see **[CONFIG.md](CONFIG.md)**.
+
+### Quick Configuration Check
+Validate your system setup anytime:
+```bash
+./config.guess
+# or
+python config.py
+```
+
 ### 2. Telegram Setup (Optional but Recommended)
 
 #### Create Bot:
